@@ -12,8 +12,9 @@ const blogsSchema = new Schema(
       unit: { type: String },
     },
     author: {
-      name: { type: String },
-      avatar: { type: String },
+      type: mongoose.Types.ObjectId,
+      ref: "Author",
+      required: true,
     },
     content: { type: String, required: true },
   },

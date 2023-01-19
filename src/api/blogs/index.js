@@ -24,7 +24,10 @@ blogsRouter.get("/", async (req, res, next) => {
     )
       .limit(mongoQuery.options.limit)
       .skip(mongoQuery.options.skip)
-      .sort(mongoQuery.options.sort);
+      .sort(mongoQuery.options.sort)
+      .populate({
+        path: "author",
+      });
     res.send({
       links: mongoQuery.links("http://localhost:3001/blogs", total),
       totalPages: Math.ceil(total / mongoQuery.options.limit),
@@ -36,7 +39,9 @@ blogsRouter.get("/", async (req, res, next) => {
 });
 blogsRouter.get("/:blogId", async (req, res, next) => {
   try {
-    const blog = await BlogsModel.findById(req.params.blogId);
+    const blog = await BlogsModel.findById(req.params.blogId).populate({
+      path: "author",
+    });
     if (blog) {
       res.send(blog);
     } else {
