@@ -2,10 +2,12 @@ import express from "express";
 import createHttpError from "http-errors";
 import BlogsModel from "./model.js";
 import q2m from "query-to-mongo";
+import { basicAuthMiddleware } from "../../lib/auth/basicAuth.js";
+import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
 
 const blogsRouter = express.Router();
 
-blogsRouter.post("/", async (req, res, next) => {
+blogsRouter.post("/", basicAuthMiddleware, async (req, res, next) => {
   try {
     const newBlog = new BlogsModel(req.body);
     const { _id } = await newBlog.save();
@@ -14,30 +16,35 @@ blogsRouter.post("/", async (req, res, next) => {
     next(error);
   }
 });
-blogsRouter.get("/", async (req, res, next) => {
-  try {
-    const mongoQuery = q2m(req.query);
-    const total = await BlogsModel.countDocuments(mongoQuery.criteria);
-    const blogs = await BlogsModel.find(
-      mongoQuery.criteria,
-      mongoQuery.options.fields
-    )
-      .limit(mongoQuery.options.limit)
-      .skip(mongoQuery.options.skip)
-      .sort(mongoQuery.options.sort)
-      .populate({
-        path: "author",
+blogsRouter.get(
+  "/",
+  basicAuthMiddleware,
+  adminOnlyMiddleware,
+  async (req, res, next) => {
+    try {
+      const mongoQuery = q2m(req.query);
+      const total = await BlogsModel.countDocuments(mongoQuery.criteria);
+      const blogs = await BlogsModel.find(
+        mongoQuery.criteria,
+        mongoQuery.options.fields
+      )
+        .limit(mongoQuery.options.limit)
+        .skip(mongoQuery.options.skip)
+        .sort(mongoQuery.options.sort)
+        .populate({
+          path: "author",
+        });
+      res.send({
+        links: mongoQuery.links("http://localhost:3001/blogs", total),
+        totalPages: Math.ceil(total / mongoQuery.options.limit),
+        blogs,
       });
-    res.send({
-      links: mongoQuery.links("http://localhost:3001/blogs", total),
-      totalPages: Math.ceil(total / mongoQuery.options.limit),
-      blogs,
-    });
-  } catch (error) {
-    next(error);
+    } catch (error) {
+      next(error);
+    }
   }
-});
-blogsRouter.get("/:blogId", async (req, res, next) => {
+);
+blogsRouter.get("/:blogId", basicAuthMiddleware, async (req, res, next) => {
   try {
     const blog = await BlogsModel.findById(req.params.blogId).populate({
       path: "author",
@@ -53,15 +60,26 @@ blogsRouter.get("/:blogId", async (req, res, next) => {
     next(error);
   }
 });
-blogsRouter.put("/:blogId", async (req, res, next) => {
+blogsRouter.put("/:blogId", basicAuthMiddleware, async (req, res, next) => {
   try {
-    const updatedBlog = await BlogsModel.findByIdAndUpdate(
-      req.params.blogId,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (updatedBlog) {
-      res.send(updatedBlog);
+    const blogToUpdate = await BlogsModel.findById(req.params.blogId).populate({
+      path: "author",
+    });
+    if (blogToUpdate) {
+      const authorToFind = blogToUpdate.author.find(
+        (author) => author._id.toString() === req.author._id.toString()
+      );
+
+      if (authorToFind) {
+        const updatedBlog = await BlogsModel.findByIdAndUpdate(
+          req.params.blogId,
+          req.body,
+          { new: true, runValidators: true }
+        );
+        res.send(updatedBlog);
+      } else {
+        next(createHttpError(401, "It's not your post"));
+      }
     } else {
       next(
         createHttpError(404, `Blog with id ${req.params.blogId} is not found`)
@@ -71,11 +89,23 @@ blogsRouter.put("/:blogId", async (req, res, next) => {
     next(error);
   }
 });
-blogsRouter.delete("/:blogId", async (req, res, next) => {
+blogsRouter.delete("/:blogId", basicAuthMiddleware, async (req, res, next) => {
   try {
-    const deletedBlog = await BlogsModel.findByIdAndDelete(req.params.blogId);
-    if (deletedBlog) {
-      res.status(204).send();
+    const blogToDelete = await BlogsModel.findById(req.params.blogId).populate({
+      path: "author",
+    });
+    if (blogToDelete) {
+      const authorToFind = blogToUpdate.author.find(
+        (author) => author._id.toString() === req.author._id.toString()
+      );
+      if (authorToFind) {
+        const updatedBlog = await BlogsModel.findByIdAndDelete(
+          req.params.blogId
+        );
+        res.status(204).send();
+      } else {
+        next(createHttpError(401, "It's not your post"));
+      }
     } else {
       next(
         createHttpError(404, `Blog with id ${req.params.blogId} is not found`)

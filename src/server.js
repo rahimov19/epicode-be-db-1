@@ -10,6 +10,7 @@ import {
   badRequestHandler,
   notFoundHandler,
   genericErrorHandler,
+  unAuthorizedHandler,
 } from "./errorHandlers.js";
 import authorsRouter from "./api/authors/index.js";
 
@@ -23,6 +24,7 @@ server.use("/blogs", blogsRouter);
 server.use("/authors", authorsRouter);
 
 server.use(badRequestHandler);
+server.use(unAuthorizedHandler);
 server.use(notFoundHandler);
 server.use(genericErrorHandler);
 

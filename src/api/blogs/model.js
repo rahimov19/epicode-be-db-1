@@ -11,11 +11,13 @@ const blogsSchema = new Schema(
       value: { type: Number },
       unit: { type: String },
     },
-    author: {
-      type: mongoose.Types.ObjectId,
-      ref: "Author",
-      required: true,
-    },
+    author: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "Author",
+        required: true,
+      },
+    ],
     content: { type: String, required: true },
   },
   {
