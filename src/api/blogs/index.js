@@ -2,12 +2,12 @@ import express from "express";
 import createHttpError from "http-errors";
 import BlogsModel from "./model.js";
 import q2m from "query-to-mongo";
-import { basicAuthMiddleware } from "../../lib/auth/basicAuth.js";
 import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
+import { JWTAuthMiddleware } from "../../lib/auth/jwtAuth.js";
 
 const blogsRouter = express.Router();
 
-blogsRouter.post("/", basicAuthMiddleware, async (req, res, next) => {
+blogsRouter.post("/", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const newBlog = new BlogsModel(req.body);
     const { _id } = await newBlog.save();
@@ -18,8 +18,8 @@ blogsRouter.post("/", basicAuthMiddleware, async (req, res, next) => {
 });
 blogsRouter.get(
   "/",
-  basicAuthMiddleware,
-  adminOnlyMiddleware,
+  JWTAuthMiddleware,
+
   async (req, res, next) => {
     try {
       const mongoQuery = q2m(req.query);
@@ -44,7 +44,7 @@ blogsRouter.get(
     }
   }
 );
-blogsRouter.get("/:blogId", basicAuthMiddleware, async (req, res, next) => {
+blogsRouter.get("/:blogId", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const blog = await BlogsModel.findById(req.params.blogId).populate({
       path: "author",
@@ -60,7 +60,7 @@ blogsRouter.get("/:blogId", basicAuthMiddleware, async (req, res, next) => {
     next(error);
   }
 });
-blogsRouter.put("/:blogId", basicAuthMiddleware, async (req, res, next) => {
+blogsRouter.put("/:blogId", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const blogToUpdate = await BlogsModel.findById(req.params.blogId).populate({
       path: "author",
@@ -89,7 +89,7 @@ blogsRouter.put("/:blogId", basicAuthMiddleware, async (req, res, next) => {
     next(error);
   }
 });
-blogsRouter.delete("/:blogId", basicAuthMiddleware, async (req, res, next) => {
+blogsRouter.delete("/:blogId", JWTAuthMiddleware, async (req, res, next) => {
   try {
     const blogToDelete = await BlogsModel.findById(req.params.blogId).populate({
       path: "author",
