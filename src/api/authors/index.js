@@ -7,6 +7,7 @@ import { basicAuthMiddleware } from "../../lib/auth/basicAuth.js";
 import { adminOnlyMiddleware } from "../../lib/auth/adminOnly.js";
 import { createAccessToken } from "../../lib/auth/tools.js";
 import { JWTAuthMiddleware } from "../../lib/auth/jwtAuth.js";
+import passport from "passport";
 
 const authorsRouter = express.Router();
 
@@ -46,17 +47,30 @@ authorsRouter.get(
 );
 
 authorsRouter.get(
-  "/me/stories",
-  basicAuthMiddleware,
-  async (req, res, next) => {
-    try {
-      const allPosts = await BlogsModel.find({ author: req.author._id });
-      res.send(allPosts);
-    } catch (error) {
-      next(error);
-    }
-  }
+  "/googleLogin",
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
+
+authorsRouter.get(
+  "/googleRedirect",
+  passport.authenticate("google", { session: false }),
+  async (req, res, next) => {
+    console.log(req.user);
+    res.send({ accessToken: req.user.accessToken });
+  }
+),
+  authorsRouter.get(
+    "/me/stories",
+    basicAuthMiddleware,
+    async (req, res, next) => {
+      try {
+        const allPosts = await BlogsModel.find({ author: req.author._id });
+        res.send(allPosts);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 
 authorsRouter.put("/me", basicAuthMiddleware, async (req, res, next) => {
   try {

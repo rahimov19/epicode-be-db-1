@@ -6,10 +6,12 @@ const { Schema, model } = mongoose;
 const authorsSchema = new Schema(
   {
     name: { type: String, required: true },
-    avatar: { type: String, required: true },
+    lastName: { type: String, required: false },
+    avatar: { type: String, required: false },
     email: { type: String, required: true },
-    password: { type: String, required: true },
+    password: { type: String, required: false },
     role: { type: String, enum: ["User", "Admin"], default: "User" },
+    googleId: { type: String, required: false },
   },
   {
     timestamps: true,
